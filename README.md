@@ -1,12 +1,5 @@
 # Spatial-Transformer-Networks-with-Keras
 
-<div align="center">
-<a href="https://colab.research.google.com/github/sayakpaul/Spatial-Transformer-Networks-with-Keras/blob/main/STN.ipynb">
-  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
-</a>
-</div>
-<br>
-
 This repository provides a Colab Notebook that shows how to use [Spatial Transformer Networks (STN)](https://arxiv.org/abs/1506.02025) inside CNNs build in Keras.
 The Colab Notebook has been obtained from forking [Spatial-Transformer-Networks-with-Keras](https://github.com/sayakpaul/Spatial-Transformer-Networks-with-Keras).
 
