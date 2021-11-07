@@ -25,7 +25,7 @@ class STN( layers.Layer ):
 	Spatial transformer network forward layer
 	"""
 	
-	def __init__( self, scale=(1, 1), localizationNetwork=None, trainable=True, name=None, dynamic=False, **kwargs ):
+	def __init__( self, scale=(1, 1), localizationNetwork=None, **kwargs ):
 		
 		self.localizationNetwork_set = False
 		
@@ -35,7 +35,7 @@ class STN( layers.Layer ):
 			self.localizationNetwork = localizationNetwork
 			self.localizationNetwork_set = True
 		
-		super().__init__( trainable, name, dynamic, **kwargs )
+		super().__init__( **kwargs )
 		
 		if isinstance( scale, numbers.Number ):
 			self.scale = (scale, scale)
@@ -50,8 +50,8 @@ class STN( layers.Layer ):
 		if not self.localizationNetwork_set:
 			self.localizationNetwork = get_localization_network( input_shape[ 1: ] )
 			self.localizationNetwork_set = True
-		else:
-			assert input_shape == self.localizationNetwork.input_shape
+		# else: # todo: causes trouble during load but it is "advisable" for customs localizationNetwork
+		# 	assert input_shape == self.localizationNetwork.input_shape
 	
 	def call( self, inputs, *args, **kwargs ):  # Defines the computation from inputs to outputs
 		
@@ -67,6 +67,9 @@ class STN( layers.Layer ):
 		return x
 	
 	def get_config( self ):
-		return { "localizationNetwork": self.localizationNetwork,
-		         "affine_grid_shape": self.affine_grid_shape,
-		         }
+		config = super().get_config()
+		config.update( { "scale": self.scale,
+		                 "localizationNetwork": self.localizationNetwork,
+		                 # "affine_grid_shape": self.affine_grid_shape, # not needed
+		                 } )
+		return config
