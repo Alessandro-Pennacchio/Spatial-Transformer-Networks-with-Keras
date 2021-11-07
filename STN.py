@@ -1,5 +1,6 @@
+import numbers
+
 import tensorflow as tf
-import tensorflow.python.keras.engine.base_layer
 from stn.transformer import affine_grid_generator, bilinear_sampler
 from tensorflow.keras import layers
 
@@ -13,39 +14,45 @@ def get_localization_network( input_shape ):
 	] )
 	return localization
 
-output_bias = tf.keras.initializers.Constant( [ 1, 0, 0, 0, 1, 0 ] )
-
 # Regressor for the 3 * 2 affine matrix
 def get_affine_params():
 	fc_loc = tf.keras.Sequential( [
+		layers.Flatten(),
 		layers.Dense( 32, activation="relu", kernel_initializer="he_normal" ),
-		layers.Dense( 3 * 2, kernel_initializer="zeros", bias_initializer=output_bias )
+		layers.Dense( 3 * 2, kernel_initializer="zeros", bias_initializer=tf.keras.initializers.Constant( [ 1, 0, 0, 0, 1, 0 ] ) )
 	] )
 	
 	return fc_loc
 
-class STN( tensorflow.python.keras.engine.base_layer.Layer ):
+class STN( layers.Layer ):
 	"""
 	Spatial transformer network forward layer
 	"""
 	
-	def __init__( self, scale, trainable=True, name="Spatial_Transformer_Network", dtype=None, dynamic=False, **kwargs ):
-		super().__init__( trainable, name, dtype, dynamic, **kwargs )
-		self.scale = scale
+	def __init__( self, scale=(1, 1), trainable=True, name=None, dynamic=False, **kwargs ):
+		super().__init__( trainable, name, dynamic, **kwargs )
+		
+		if isinstance( scale, numbers.Number ):
+			self.scale = (scale, scale)
+		elif len( scale ) == 2:
+			self.scale = scale
+		else:
+			raise Exception
+		
 		self.fc_loc = get_affine_params()
 	
 	def build( self, input_shape ):
+		self.affine_grid_shape = (int( input_shape[ 1 ] * self.scale[ 0 ] ), int( input_shape[ 2 ] * self.scale[ 1 ] ))
 		self.localization = get_localization_network( input_shape[ 1: ] )
 	
 	def call( self, inputs, *args, **kwargs ):  # Defines the computation from inputs to outputs
 		
 		xs = self.localization( inputs )
-		xs = tf.reshape( xs, (-1, tf.math.reduce_prod( xs.shape[ 1: ] )) )
 		
 		theta = self.fc_loc( xs )
 		theta = tf.reshape( theta, (-1, 2, 3) )
 		
-		grid = affine_grid_generator( int( inputs.shape[ 1 ] * self.scale ), int( inputs.shape[ 2 ] * self.scale ), theta )
+		grid = affine_grid_generator( self.affine_grid_shape[ 0 ], self.affine_grid_shape[ 1 ], theta )
 		x_s = grid[ :, 0, :, : ]
 		y_s = grid[ :, 1, :, : ]
 		x = bilinear_sampler( inputs, x_s, y_s )
@@ -55,4 +62,5 @@ class STN( tensorflow.python.keras.engine.base_layer.Layer ):
 	def get_config( self ):
 		return { "localization": self.localization,
 		         "fc_loc": self.fc_loc,
+		         "affine_grid_shape": self.affine_grid_shape,
 		         }
